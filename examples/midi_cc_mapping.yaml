@@ -1,0 +1,48 @@
+---
+midiCCMappingObject:
+  name: Bass Filter Cutoff
+  controlChannel: 1
+  midiCC: 19
+  targetTrack: "bass trg ori-1"
+  targetInstruments: [0, 1, 2, 3]
+  targetParameter: 514
+---
+midiCCMappingObject:
+  name: Future Pad Filter Cutoff
+  controlChannel: 1
+  midiCC: 23
+  targetTrack: "Future city pad"
+  targetInstruments: [0, 1, 2, 3]
+  targetParameter: 514
+---
+midiCCMappingObject:
+  name: Bass Filter Resonance
+  controlChannel: 1
+  midiCC: 17
+  targetTrack: "bass trg ori-1"
+  targetInstruments: [0, 1, 2, 3]
+  targetParameter: 515
+---
+midiCCMappingObject:
+  name: Future Pad Filter Resonance
+  controlChannel: 1
+  midiCC: 21
+  targetTrack: "Future city pad"
+  targetInstruments: [0, 1, 2, 3]
+  targetParameter: 515
+---
+midiCCMappingObject:
+  name: Bass Volume
+  controlChannel: 1
+  midiCC: 16
+  targetTrack: "bass trg ori-1"
+  targetInstruments: [257]
+  targetParameter: 7
+---
+midiCCMappingObject:
+  name: Future pad Volume
+  controlChannel: 1
+  midiCC: 20
+  targetTrack: "Future city pad"
+  targetInstruments: [257]
+  targetParameter: 7
