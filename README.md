@@ -33,10 +33,10 @@ Because of that if you want to control filter parameters for your entire keygrou
 
 ## I want to automate my filters, how do I do it?
 
-Step 1: save your .xpj, back it up, no warranty in case of data loss.
-Step 2: copy your .xpj to your computer and load this program
-Step 3: run `python  -m xpjutils <your-xpj-file> make-mapping-template <path-to-yaml.yml>`. This will scan any drum/keygroup track and prepare a template item for each of them. 
-Step 4: edit `path-to-yaml.yml` and set the right midi CC codes for your device and for each track.
-Step 5: run `python  -m xpjutils <your-xpj-file> change-mappings >path-to-yaml.yml> <new-xpj-file>`
-Step 6: copy <new-xpj-file> to your MPC/Force overwriting the original xpj file.
-Step 7: see that it works.
+- Step 1: save your .xpj, back it up, no warranty in case of data loss.
+- Step 2: copy your .xpj to your computer and load this program
+- Step 3: run `python  -m xpjutils <your-xpj-file> make-mapping-template <path-to-yaml.yml>`. This will scan any drum/keygroup track and prepare a template item for each of them. 
+- Step 4: edit `path-to-yaml.yml` and set the right midi CC codes for your device and for each track.
+- Step 5: run `python  -m xpjutils <your-xpj-file> change-mappings >path-to-yaml.yml> <new-xpj-file>`
+- Step 6: copy <new-xpj-file> to your MPC/Force overwriting the original xpj file.
+- Step 7: see that it works.
