@@ -2,6 +2,8 @@ import gzip
 import json
 from dataclasses import dataclass
 
+from xpjutils.constants import PROGRAM_TYPE_DRUM, PROGRAM_TYPE_KEYGROUP
+from .dupjson import FakeDict
 
 @dataclass
 class AkaiMidiLearnSettingsControlTargetParamIndex:
@@ -125,15 +127,14 @@ class CCMappingDefinition:
 def duplicate_locators_pair_hook(ordered_pairs):
     d = {}
     for k, v in ordered_pairs:
-        if k in d:
-            assert k == 'locators'
+        if k == 'locators':
             if isinstance(v, dict) and 'names' in v:
-                d['locators__1'] = v
-            elif isinstance(v, list) and len(v) and "bar" in v[0]:
                 d['locators__2'] = v
-            else:
-                raise ValueError(f"Bad locators entry %s", v)
+            elif isinstance(v, list) and len(v) and 'bar' in v[0]:
+                d['locators__1'] = v
         else:
+            if k in d:
+                raise NotImplementedError(f"unhandled duplicate json key {v}, please add handler")
             d[k] = v
     return d
 
@@ -146,6 +147,46 @@ class AkaiXPJFile:
     @property
     def data(self):
         return self._json["data"]
+
+    @property
+    def report_tracks(self):
+        report_tracks = {}
+        for track in self.data['tracks']:
+            program = track['program']
+            if program['type'] not in (PROGRAM_TYPE_DRUM, PROGRAM_TYPE_KEYGROUP):
+                continue
+            samples = track['samples']
+            instruments = program['drum']['instruments']
+            # now identify active instruments, ones with at least one layer that has samples
+            active_instruments = {}
+            referenced_samples = []
+            for num, instrument in enumerate(instruments):
+                active = False
+                samples_in_use = []
+                for layer in instrument['layers'].values():
+                    if len(layer['sampleName']):
+                        active = True
+                        samples_in_use.append(layer['sampleName'])
+                if not active:
+                    continue
+                low_note = instrument['lowNote']
+                high_note = instrument['highNote']
+                coarse_tune = instrument['coarseTune']
+                fine_tune = instrument['fineTune']
+                active_instruments[num] = {
+                    'low_note': low_note,
+                    'high_note': high_note,
+                    'coarse_tune': coarse_tune,
+                    'fine_tune': fine_tune,
+                    'samples_in_use': samples_in_use,
+                }
+            for sample in samples:
+                referenced_samples.append(sample['name'])
+            report_tracks[track['name']] = {
+                'referenced_samples': referenced_samples,
+                'instruments': active_instruments,
+            }
+        return report_tracks
 
     @property
     def raw_json(self):
@@ -170,6 +211,31 @@ class AkaiXPJFile:
             res[idx + 1] = worth_layers
         return res
 
+    @property
+    def serialized_json(self):
+        """this is special because we need to generate duplicate keys which are not supported well by """
+        dict1_k = ['version', 'key', 'mixer', 'emulation', 'masterTempoEnabled', 'masterTempo']
+        dict3_k = ['scene', 'samples', 'tracks', 'sequences', 'songs', 'qlinkProjectModeAssignments', 'qlinkPadSceneModeAssignments', 'qlinkPadParamModeAssignments', 'padPerformSettings', 'qlinkMode', 'currentAssignableXFader', 'currentAssignablePadBank', 'currentAssignableEnvelopeFollower', 'info', 'qlinkProjectModeAssignments2', 'assignableXFaderAssignments', 'assignableXYPadAssignments1', 'assignableXYPadAssignments2', 'assignableXYPadAssignments3', 'assignableXYPadAssignments4', 'assignablePadGridAssignments', 'assignableEnvelopeFollowerAssignments']
+        dict4_k = ['clipPlayerData', 'midiSendDestinations', 'midiLearnSettings', 'quantiser', 'currentTrackIndex', 'parameterSnapshotterData', 'rowLaunchSnapshotAssignments', 'engineMode', 'sharedClipMatrixData', 'currentClipRow', 'arpeggiatorProperties', 'mpcControlSurfaceBehaviour', 'midiNoteFilterPipe', 'xyfxResponder']
+        contents = []
+        dat = self._json['data']
+        for k in dict1_k:
+            contents.append((k, dat[k]))
+        contents.append(('locators', dat['locators__1']))
+        for k in dict3_k:
+            contents.append((k, dat[k]))
+        contents.append(('locators', dat['locators__2']))
+        for k in dict4_k:
+            contents.append((k, dat[k]))
+
+        # now validate top-level keys to make sure we do not miss fields in new versions
+        for k in dat:
+            if k in ('locators__1', 'locators__2', 'locators'):
+                continue
+            if k not in dict1_k and k not in dict3_k and k not in dict4_k:
+                raise NotImplementedError(f"We are not dumping field {k}, need a bugfix")
+        return FakeDict.to_json([('data', FakeDict(contents))])
+    
     @property
     def all_instruments(self):
         res = {}
@@ -231,20 +297,7 @@ class AkaiXPJFile:
         out.extend(b"\x0a")
         out.extend(self._platform)
         out.extend(b"\x0a")
-        locators1 = self._json['data']['locators__1']
-        locators2 = self._json['data']['locators']
-        data_clone = dict(self._json['data'])
-        del data_clone['locators__1']
-        del data_clone['locators']
-        json_data = json.dumps({"data": data_clone}, indent=4)
-        # urgh
-        json_data = json_data.replace('"clipPlayerData":', json.dumps({"locators": locators1})[1:-1] + ', "clipPlayerData":')
-        json_data = json_data.replace('"scene":', json.dumps({"locators": locators2})[1:-1] + ', "scene":')
-        # reindent
-        with open('argh.json', 'w', encoding='utf-8') as fh:
-            fh.write(json_data)
-        # json_data = json.dumps(json.loads(json_data), indent=4)
-        json_bytes = json_data.encode('utf-8')
+        json_bytes = self.serialized_json.encode('utf-8')
         out.extend(json_bytes)
         with gzip.open(path, "wb", compresslevel=6) as fh:
             fh.write(out)
